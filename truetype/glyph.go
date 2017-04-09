@@ -177,12 +177,14 @@ func (g *GlyphBuf) load(recursion uint32, i Index, useMyMetrics bool) (err error
 	}
 	// Find the relevant slice of g.font.glyf.
 	var g0, g1 uint32
-	if g.font.locaOffsetFormat == locaOffsetFormatShort {
-		g0 = 2 * uint32(u16(g.font.loca, 2*int(i)))
-		g1 = 2 * uint32(u16(g.font.loca, 2*int(i)+2))
-	} else {
-		g0 = u32(g.font.loca, 4*int(i))
-		g1 = u32(g.font.loca, 4*int(i)+4)
+	if len(g.font.loca) > 0 {
+		if g.font.locaOffsetFormat == locaOffsetFormatShort {
+			g0 = 2 * uint32(u16(g.font.loca, 2*int(i)))
+			g1 = 2 * uint32(u16(g.font.loca, 2*int(i)+2))
+		} else {
+			g0 = u32(g.font.loca, 4*int(i))
+			g1 = u32(g.font.loca, 4*int(i)+4)
+		}
 	}
 
 	// Decode the contour count and nominal bounding box, from the first

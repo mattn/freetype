@@ -173,6 +173,8 @@ type cm struct {
 
 // A Font represents a Truetype font.
 type Font struct {
+	version uint32
+
 	// Tables sliced from the TTF data. The different tables are documented
 	// at http://developer.apple.com/fonts/TTRefMan/RM06/Chap6.html
 	cmap, cvt, fpgm, glyf, hdmx, head, hhea, hmtx, kern, loca, maxp, name, os2, prep, vmtx []byte
@@ -288,6 +290,9 @@ func (f *Font) parseHead() error {
 }
 
 func (f *Font) parseHhea() error {
+	if f.version < 0x00010000 {
+		return nil
+	}
 	if len(f.hhea) != 36 {
 		return FormatError(fmt.Sprintf("bad hhea length: %d", len(f.hhea)))
 	}
@@ -342,6 +347,9 @@ func (f *Font) parseKern() error {
 }
 
 func (f *Font) parseMaxp() error {
+	if f.version < 0x00010000 && len(f.maxp) == 6 {
+		return nil
+	}
 	if len(f.maxp) != 32 {
 		return FormatError(fmt.Sprintf("bad maxp length: %d", len(f.maxp)))
 	}
@@ -443,7 +451,7 @@ func (f *Font) unscaledHMetric(i Index) (h HMetric) {
 	if j < 0 || f.nGlyph <= j {
 		return HMetric{}
 	}
-	if j >= f.nHMetric {
+	if f.nHMetric > 0 && j >= f.nHMetric {
 		p := 4 * (f.nHMetric - 1)
 		return HMetric{
 			AdvanceWidth:    fixed.Int26_6(u16(f.hmtx, p)),
@@ -541,8 +549,11 @@ func parse(ttf []byte, offset int) (font *Font, err error) {
 	}
 	originalOffset := offset
 	magic, offset := u32(ttf, offset), offset+4
+	version := uint32(0)
 	switch magic {
 	case 0x00010000:
+		// No-op.
+	case 0x4f54544f: // "otto"
 		// No-op.
 	case 0x74746366: // "ttcf" as a big-endian uint32.
 		if originalOffset != 0 {
@@ -583,6 +594,8 @@ func parse(ttf []byte, offset int) (font *Font, err error) {
 		return
 	}
 	f := new(Font)
+	f.version = version
+
 	// Assign the table slices.
 	for i := 0; i < n; i++ {
 		x := 16*i + offset
