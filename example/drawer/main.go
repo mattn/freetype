@@ -23,6 +23,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"strings"
 
 	"github.com/golang/freetype/truetype"
 	"golang.org/x/image/font"
@@ -32,10 +33,11 @@ import (
 var (
 	dpi      = flag.Float64("dpi", 72, "screen resolution in Dots Per Inch")
 	fontfile = flag.String("fontfile", "../../testdata/luxisr.ttf", "filename of the ttf font")
-	hinting  = flag.String("hinting", "none", "none | full")
+	hinting  = flag.String("hinting", "none", "none | vert | full")
 	size     = flag.Float64("size", 12, "font size in points")
 	spacing  = flag.Float64("spacing", 1.5, "line spacing (e.g. 2 means double spaced)")
 	wonb     = flag.Bool("whiteonblack", false, "white text on a black background")
+	textfile = flag.String("textfile", "", "filename of drawing text")
 )
 
 const title = "Jabberwocky"
@@ -91,6 +93,14 @@ func main() {
 		log.Println(err)
 		return
 	}
+	if *textfile != "" {
+		b, err := ioutil.ReadFile(*textfile)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		text = strings.Split(string(b), "\n")
+	}
 
 	// Draw the background and the guidelines.
 	fg, bg := image.Black, image.White
@@ -112,6 +122,8 @@ func main() {
 	switch *hinting {
 	case "full":
 		h = font.HintingFull
+	case "vert":
+		h = font.HintingVertical
 	}
 	d := &font.Drawer{
 		Dst: rgba,
